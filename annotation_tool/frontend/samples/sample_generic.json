@@ -1,0 +1,23 @@
+[
+  {
+    "id": "demo_1",
+    "image": "samples/sample_image.jpg",
+    "question": "What object is highlighted?",
+    "answer": "car",
+    "choices": ["car", "bike", "bus"],
+    "annotations": [
+      {
+        "id": "ann_1",
+        "bbox": [120, 100, 180, 90],
+        "label": "car"
+      }
+    ]
+  },
+  {
+    "question_id": "map_7",
+    "image": "samples/sample_image.jpg",
+    "annotation": "anno/map_7.json",
+    "question": "Locate the building",
+    "answer": "[220,130,160,120]"
+  }
+]

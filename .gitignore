@@ -1,0 +1,10 @@
+.DS_Store
+annotation_tool/.venv/
+annotation_tool/models/*.pth
+annotation_tool/models/*.pt
+Diagram_Attribution_Dataset/
+Predictions/
+Reviewed/
+dataset_box_views/
+gcp_outputs/
+*.csv
