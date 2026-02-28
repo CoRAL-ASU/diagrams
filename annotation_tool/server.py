@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from __future__ import annotations
 import base64
 import hashlib
 import io
@@ -105,6 +106,10 @@ _SAM2_LOCAL_GENERATOR = None
 _SAM2_LOCAL_LOCK = threading.Lock()
 _SAM1_GENERATOR = None
 _SAM1_LOCK = threading.Lock()
+_SAM2_TF_MODEL = None
+_SAM2_TF_PROCESSOR = None
+_SAM2_TF_LOCK = threading.Lock()
+SAM2_TF_MODEL_ID = os.environ.get("SAM2_TF_MODEL_ID", "facebook/sam2.1-hiera-tiny").strip()
 
 
 def _find_dataset_root() -> Path:
@@ -123,16 +128,12 @@ def _find_dataset_root() -> Path:
 
 
 DATASET_ROOT = _find_dataset_root()
-PREDICTIONS_ROOT = (DATASET_ROOT.parent / "Predictions" / "gemini-pred").resolve()
-PRED_ID_RE = re.compile(r"([^,\s/]+)/")
-_PRED_INDEX = None
-_PRED_LOCK = threading.Lock()
 
 DEFAULT_GEMINI_QA_PROMPT = (
     "1 · Task Overview\n"
     "You are given a diagram image with rich visual and textual structure.\n"
-    "Your task is to generate a high-quality question-answer pair that is answerable from the image alone.\n"
-    "The QA should reflect visual reasoning over meaningful diagram content (objects, labels, legends, axes, arrows, relationships, quantities, or structure).\n"
+    "Your task is to generate a high-quality question-answer pair that requires analyzing visual elements (spatial layout, colors, shapes, or connections) to answer.\n"
+    "Avoid questions that can be answered by simply reading a single line of text without looking at the diagram's structure.\n"
     "\n"
     "2 · Response Format — STRICT\n"
     "Return strict JSON only with exactly these keys:\n"
@@ -141,44 +142,22 @@ DEFAULT_GEMINI_QA_PROMPT = (
     "  \"answer\": \"<string>\",\n"
     "  \"choices\": [\"<string>\", \"<string>\", ...]\n"
     "}\n"
-    "Rules:\n"
-    "- No markdown, no code fences, no additional keys.\n"
-    "- If the question is free-response, choices must be [] (empty array).\n"
-    "- If choices are provided, exactly one choice must match the answer string verbatim.\n"
     "\n"
     "3 · Question Quality Requirements\n"
     "The question must be:\n"
-    "- Unambiguous and specific.\n"
-    "- Grounded in visible evidence from the image.\n"
-    "- Useful for diagram understanding (not trivial yes/no unless strongly justified by content).\n"
+    "- Grounded in visual evidence (e.g., 'What color is...', 'Which box is larger...', 'Where does the red arrow point...').\n"
+    "- Focused on the spatial relationship between elements (above, below, inside, connected to).\n"
     "- Natural-sounding and concise.\n"
     "\n"
-    "Prefer question types such as:\n"
-    "- Identification (component/region/label)\n"
-    "- Comparison (greater/less/equal, before/after, connected/not connected)\n"
-    "- Retrieval (value, label, category, state, node, symbol)\n"
-    "- Relationship/flow (next step, dependency, direction, linkage)\n"
-    "\n"
     "4 · Answer Requirements\n"
-    "- Must be directly supported by visual/textual evidence in the image.\n"
-    "- Must be concise (typically 1–6 words unless numeric/phrase requires more).\n"
-    "- Must not include explanation text.\n"
+    "- Must be directly supported by graphical evidence in the image.\n"
+    "- Must be concise (typically 1–6 words).\n"
     "\n"
     "5 · Multiple-Choice Guidance\n"
-    "If you provide choices:\n"
-    "- Provide 3–5 options.\n"
-    "- Include one correct option equal to \"answer\" exactly.\n"
-    "- Distractors should be plausible and image-related, not random.\n"
-    "- Avoid obviously wrong distractors.\n"
+    "- Distractors should be other visual properties present in the image.\n"
     "\n"
     "6 · Safety / Validity Constraints\n"
-    "- Do not hallucinate content not present in the image.\n"
-    "- Do not rely on outside/world knowledge.\n"
-    "- Do not generate subjective/opinion-based questions.\n"
-    "- If the image is unreadable or insufficient, still output valid JSON with:\n"
-    "  question set to a simple observable question,\n"
-    "  answer set to \"unclear\",\n"
-    "  choices as [].\n"
+    "- Do not rely on outside/world knowledge or text-only retrieval.\n"
 )
 
 DEFAULT_GEMINI_BBOX_PROMPT = (
@@ -690,77 +669,261 @@ def suggest_boxes_via_sam1(image_bytes: bytes):
     return boxes
 
 
-def _pick_best_box_for_point(boxes, x: float, y: float):
-    if not isinstance(boxes, list) or not boxes:
-        return None
+def _load_sam2_transformers():
+    global _SAM2_TF_MODEL, _SAM2_TF_PROCESSOR
+    with _SAM2_TF_LOCK:
+        if _SAM2_TF_MODEL is not None and _SAM2_TF_PROCESSOR is not None:
+            return _SAM2_TF_MODEL, _SAM2_TF_PROCESSOR
+        try:
+            import torch
+            from transformers import Sam2Model, Sam2Processor
+        except Exception as e:
+            raise RuntimeError("SAM2 transformers backend requires torch and transformers with Sam2 support.") from e
 
-    containing = []
-    others = []
-    for b in boxes:
-        if not isinstance(b, dict):
-            continue
-        bbox = b.get("bbox")
-        if not (isinstance(bbox, (list, tuple)) and len(bbox) >= 4):
-            continue
-        bx, by, bw, bh = [float(v) for v in bbox[:4]]
-        cx = bx + (bw / 2.0)
-        cy = by + (bh / 2.0)
-        area = max(1.0, bw * bh)
-        dist2 = (cx - x) ** 2 + (cy - y) ** 2
-        enriched = (dist2, area, b)
-        if bx <= x <= bx + bw and by <= y <= by + bh:
-            containing.append(enriched)
-        else:
-            others.append(enriched)
-
-    if containing:
-        # Prefer nearest center, then smaller area if tie.
-        containing.sort(key=lambda t: (t[0], t[1]))
-        return containing[0][2]
-    if others:
-        others.sort(key=lambda t: (t[0], t[1]))
-        return others[0][2]
-    return None
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        processor = Sam2Processor.from_pretrained(SAM2_TF_MODEL_ID)
+        model = Sam2Model.from_pretrained(SAM2_TF_MODEL_ID).to(device)
+        _SAM2_TF_MODEL = model
+        _SAM2_TF_PROCESSOR = processor
+        return _SAM2_TF_MODEL, _SAM2_TF_PROCESSOR
 
 
-def suggest_box_for_point(image_bytes: bytes, mime_type: str, x: float, y: float):
-    boxes = suggest_boxes_via_sam2(image_bytes, mime_type)
-    best = _pick_best_box_for_point(boxes, float(x), float(y))
-    if not best:
-        raise RuntimeError("SAM2 could not find a box near the clicked point.")
-    return best
-
-
-def _point_source_tag() -> str:
-    if SAM_BACKEND == "sam1":
-        return "sam1_point"
-    if SAM_BACKEND == "local":
-        return "sam2_point"
-    if SAM_BACKEND == "hf":
-        return "sam2_hf_point"
-    return "sam_point"
-
-
-def _normalize_fallback_box(item: dict):
-    if not isinstance(item, dict):
-        return None
-    ident = str(item.get("id") or item.get("bbox_id") or item.get("ann_id") or "").strip()
-    if not ident:
-        return None
+def suggest_box_for_multi_points_sam2(image_bytes: bytes, points: list[dict]):
     try:
-        x = float(item.get("x"))
-        y = float(item.get("y"))
-        w = float(item.get("w"))
-        h = float(item.get("h"))
-    except Exception:
-        return None
-    if w <= 0 or h <= 0:
-        return None
+        import numpy as np
+        import torch
+        from PIL import Image
+    except Exception as e:
+        raise RuntimeError("SAM2 multi-point backend requires Pillow, NumPy, and torch.") from e
+
+    model, processor = _load_sam2_transformers()
+    raw_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    device = next(model.parameters()).device
+
+    point_pairs = []
+    for p in points if isinstance(points, list) else []:
+        try:
+            px = float(p.get("x"))
+            py = float(p.get("y"))
+        except Exception:
+            continue
+        point_pairs.append([px, py])
+    if not point_pairs:
+        raise RuntimeError("No valid points provided for SAM.")
+
+    input_points = [[[point_pairs[i] for i in range(len(point_pairs))]]]
+    input_labels = [[[1 for _ in point_pairs]]]
+
+    inputs = processor(
+        images=raw_image,
+        input_points=input_points,
+        input_labels=input_labels,
+        return_tensors="pt",
+    ).to(device)
+
+    with torch.no_grad():
+        outputs = model(**inputs)
+
+    masks = processor.post_process_masks(outputs.pred_masks.cpu(), inputs["original_sizes"])[0]
+    # masks shape usually: [num_objects, num_masks, H, W] (or compatible variants)
+    if not hasattr(masks, "shape"):
+        raise RuntimeError("SAM2 returned invalid mask output.")
+
+    if len(masks.shape) == 4:
+        mask = masks[0, 0].numpy()
+    elif len(masks.shape) == 3:
+        mask = masks[0].numpy()
+    else:
+        raise RuntimeError("SAM2 returned unsupported mask dimensions.")
+
+    # Convert raw mask to binary conservatively, then restrict to the connected
+    # component nearest/containing user clicks to avoid oversized global boxes.
+    mask_arr = np.asarray(mask, dtype=np.float32)
+    if mask_arr.size == 0:
+        raise RuntimeError("SAM2 returned empty mask array.")
+    if mask_arr.min() < 0.0:
+        threshold = 0.0  # logits-like output
+    elif mask_arr.max() <= 1.0:
+        threshold = 0.5  # probability-like output
+    else:
+        threshold = float(mask_arr.mean())
+    mask_bin = mask_arr > threshold
+    if not np.any(mask_bin):
+        # fallback threshold for sparse/low-confidence outputs
+        mask_bin = mask_arr > 0.0
+    if not np.any(mask_bin):
+        raise RuntimeError("SAM2 mask was empty for the selected points.")
+
+    h_img, w_img = mask_bin.shape[:2]
+    pixel_points = []
+    for p in point_pairs:
+        px = int(max(0, min(w_img - 1, round(float(p[0])))))
+        py = int(max(0, min(h_img - 1, round(float(p[1])))))
+        pixel_points.append((px, py))
+    mid_x = sum(p[0] for p in pixel_points) / max(1, len(pixel_points))
+    mid_y = sum(p[1] for p in pixel_points) / max(1, len(pixel_points))
+
+    from collections import deque
+
+    visited = np.zeros_like(mask_bin, dtype=bool)
+    comp_map = np.full(mask_bin.shape, -1, dtype=np.int32)
+    components = []
+    comp_idx = 0
+    ys, xs = np.where(mask_bin)
+    for sy, sx in zip(ys.tolist(), xs.tolist()):
+        if visited[sy, sx]:
+            continue
+        q = deque([(sy, sx)])
+        visited[sy, sx] = True
+        comp_map[sy, sx] = comp_idx
+        min_x = max_x = sx
+        min_y = max_y = sy
+        area = 0
+        points_inside = 0
+
+        while q:
+            cy, cx = q.popleft()
+            area += 1
+            if cx < min_x:
+                min_x = cx
+            if cx > max_x:
+                max_x = cx
+            if cy < min_y:
+                min_y = cy
+            if cy > max_y:
+                max_y = cy
+            for ptx, pty in pixel_points:
+                if cx == ptx and cy == pty:
+                    points_inside += 1
+
+            for ny, nx in ((cy - 1, cx), (cy + 1, cx), (cy, cx - 1), (cy, cx + 1)):
+                if ny < 0 or ny >= h_img or nx < 0 or nx >= w_img:
+                    continue
+                if visited[ny, nx] or not mask_bin[ny, nx]:
+                    continue
+                visited[ny, nx] = True
+                comp_map[ny, nx] = comp_idx
+                q.append((ny, nx))
+
+        components.append(
+            {
+                "idx": comp_idx,
+                "min_x": min_x,
+                "max_x": max_x,
+                "min_y": min_y,
+                "max_y": max_y,
+                "area": area,
+                "points_inside": points_inside,
+            }
+        )
+        comp_idx += 1
+
+    if not components:
+        raise RuntimeError("SAM2 mask had no connected components.")
+
+    total_points = len(pixel_points)
+    preferred = [c for c in components if c["points_inside"] >= total_points]
+    if not preferred:
+        max_points = max(c["points_inside"] for c in components)
+        preferred = [c for c in components if c["points_inside"] == max_points]
+
+    if preferred:
+        # Force two-point locality: prefer smallest matching component near click midpoint.
+        def _pref_rank(c):
+            cx = (c["min_x"] + c["max_x"]) / 2.0
+            cy = (c["min_y"] + c["max_y"]) / 2.0
+            d2 = (cx - mid_x) ** 2 + (cy - mid_y) ** 2
+            return (c["area"], d2)
+
+        best = min(preferred, key=_pref_rank)
+    else:
+        # If neither click lies exactly on a positive pixel, pick nearest component center.
+        def _dist2(c):
+            cx = (c["min_x"] + c["max_x"]) / 2.0
+            cy = (c["min_y"] + c["max_y"]) / 2.0
+            return (cx - mid_x) ** 2 + (cy - mid_y) ** 2
+
+        best = min(components, key=lambda c: (_dist2(c), -c["area"]))
+
+    x_min = best["min_x"]
+    x_max = best["max_x"]
+    y_min = best["min_y"]
+    y_max = best["max_y"]
+
+    # Restrict mask/bbox very tightly around all selected points.
+    click_x_min = min(p[0] for p in pixel_points)
+    click_x_max = max(p[0] for p in pixel_points)
+    click_y_min = min(p[1] for p in pixel_points)
+    click_y_max = max(p[1] for p in pixel_points)
+    click_w = max(8, click_x_max - click_x_min + 1)
+    click_h = max(8, click_y_max - click_y_min + 1)
+    # Keep only a small safety margin so generated box follows user intent closely.
+    pad_x = max(2, int(round(click_w * 0.15)))
+    pad_y = max(2, int(round(click_h * 0.15)))
+    wx0 = max(0, click_x_min - pad_x)
+    wx1 = min(w_img - 1, click_x_max + pad_x)
+    wy0 = max(0, click_y_min - pad_y)
+    wy1 = min(h_img - 1, click_y_max + pad_y)
+
+    sel_idx = int(best.get("idx", -1))
+    local_mask = None
+    if sel_idx >= 0:
+        local_mask = (comp_map[wy0 : wy1 + 1, wx0 : wx1 + 1] == sel_idx)
+        if np.any(local_mask):
+            ly, lx = np.where(local_mask)
+            x_min = wx0 + int(lx.min())
+            x_max = wx0 + int(lx.max())
+            y_min = wy0 + int(ly.min())
+            y_max = wy0 + int(ly.max())
+        else:
+            # If SAM component misses strict ROI, fallback to tight ROI around points.
+            x_min, x_max = wx0, wx1
+            y_min, y_max = wy0, wy1
+    w = max(1.0, float(x_max - x_min))
+    h = max(1.0, float(y_max - y_min))
+
+    # Final clamp: never allow bbox to exceed a tight envelope around clicks.
+    tight_x0 = max(0, click_x_min - pad_x)
+    tight_x1 = min(w_img - 1, click_x_max + pad_x)
+    tight_y0 = max(0, click_y_min - pad_y)
+    tight_y1 = min(h_img - 1, click_y_max + pad_y)
+    x_min = max(x_min, tight_x0)
+    x_max = min(x_max, tight_x1)
+    y_min = max(y_min, tight_y0)
+    y_max = min(y_max, tight_y1)
+    w = max(1.0, float(x_max - x_min))
+    h = max(1.0, float(y_max - y_min))
+
+    # Build overlay from selected component clipped to strict ROI.
+    selected_mask = np.zeros_like(mask_bin, dtype=np.uint8)
+    if sel_idx >= 0:
+        comp_full = (comp_map == sel_idx)
+        comp_roi = comp_full[wy0 : wy1 + 1, wx0 : wx1 + 1]
+        if np.any(comp_roi):
+            selected_mask[wy0 : wy1 + 1, wx0 : wx1 + 1] = comp_roi.astype(np.uint8) * 255
+        else:
+            selected_mask[y_min : y_max + 1, x_min : x_max + 1] = 255
+    else:
+        selected_mask[y_min : y_max + 1, x_min : x_max + 1] = 255
+    mask_u8 = selected_mask
+    mask_buf = io.BytesIO()
+    Image.fromarray(mask_u8, mode="L").save(mask_buf, format="PNG")
+    mask_data_url = "data:image/png;base64," + base64.b64encode(mask_buf.getvalue()).decode("utf-8")
+
     return {
-        "id": ident,
-        "bbox": [x, y, w, h],
-        "label": str(item.get("label") or ""),
-        "meta": {"source": "fallback_catalog"},
+        "id": "sam2_multi_point",
+        "bbox": [float(x_min), float(y_min), w, h],
+        "label": "",
+        "meta": {"source": "sam2_multi_point", "model_id": SAM2_TF_MODEL_ID},
+        "mask_data_url": mask_data_url,
+        "diagnostics": {
+            "points_selected": int(total_points),
+            "points_inside_selected_component": int(best.get("points_inside", 0)),
+            "selected_component_area": int(best.get("area", 0)),
+            "selected_component_bbox": [int(x_min), int(y_min), int(x_max), int(y_max)],
+            "num_components": int(len(components)),
+            "local_window_bbox": [int(wx0), int(wy0), int(wx1), int(wy1)],
+        },
     }
 
 
@@ -1382,17 +1545,6 @@ def _norm_key(v: str) -> str:
     return str(v or "").strip().lower()
 
 
-def _parse_prediction_ids(answer_text: str):
-    if not isinstance(answer_text, str):
-        return []
-    ids = []
-    for m in PRED_ID_RE.finditer(answer_text):
-        ident = m.group(1).strip()
-        if ident:
-            ids.append(ident)
-    return ids
-
-
 def _id_variants(ident: str):
     base = str(ident or "").strip()
     if not base:
@@ -1407,115 +1559,6 @@ def _id_variants(ident: str):
         if stripped.lower() != stripped:
             out.append(stripped.lower())
     return out
-
-
-def _build_prediction_index():
-    index = {}
-    by_qid = {}
-    if not PREDICTIONS_ROOT.exists():
-        return {"by_q_ann": index, "by_qid": by_qid}
-
-    for fp in sorted(PREDICTIONS_ROOT.glob("*.json")):
-        try:
-            data = json.loads(fp.read_text(encoding="utf-8"))
-        except Exception:
-            continue
-        items = data.values() if isinstance(data, dict) else data if isinstance(data, list) else []
-        for item in items:
-            if not isinstance(item, dict):
-                continue
-            q_id = str(item.get("q_id") or "").strip()
-            ann = str(item.get("annotation") or item.get("annotation_path") or "").strip()
-            img = str(item.get("image") or item.get("image_path") or "").strip()
-            answer = str(item.get("answer") or "")
-            rec = {
-                "q_id": q_id,
-                "annotation_path": ann,
-                "image_path": img,
-                "answer": answer,
-                "pred_ids": _parse_prediction_ids(answer),
-            }
-            if q_id:
-                key = (_norm_key(q_id), _norm_key(ann))
-                index.setdefault(key, rec)
-                by_qid.setdefault(_norm_key(q_id), []).append(rec)
-    return {"by_q_ann": index, "by_qid": by_qid}
-
-
-def _get_prediction_index():
-    global _PRED_INDEX
-    with _PRED_LOCK:
-        if _PRED_INDEX is None:
-            _PRED_INDEX = _build_prediction_index()
-        return _PRED_INDEX
-
-
-def predict_boxes_from_saved_outputs(payload: dict):
-    q_id = str(payload.get("q_id") or "").strip()
-    ann = str(payload.get("annotation_path") or "").strip()
-    img = str(payload.get("image_path") or "").strip()
-    gt_boxes = payload.get("gt_boxes") if isinstance(payload.get("gt_boxes"), list) else []
-
-    pred_index = _get_prediction_index()
-    rec = pred_index["by_q_ann"].get((_norm_key(q_id), _norm_key(ann)))
-    if rec is None:
-        candidates = pred_index["by_qid"].get(_norm_key(q_id), [])
-        if len(candidates) == 1:
-            rec = candidates[0]
-        elif candidates:
-            img_norm = _norm_key(img)
-            rec = next((c for c in candidates if _norm_key(c.get("image_path")) == img_norm), candidates[0])
-
-    if not rec:
-        return {"boxes": [], "source": "saved_predictions", "status": "not_found"}
-
-    gt_by_id = {}
-    for b in gt_boxes:
-        if not isinstance(b, dict):
-            continue
-        ident = str(b.get("id") or "").strip()
-        if ident:
-            for key in _id_variants(ident):
-                gt_by_id[key] = b
-
-    predicted = []
-    seen = set()
-    for ident in rec.get("pred_ids", []):
-        source_gt = None
-        for key in _id_variants(ident):
-            if key in gt_by_id:
-                source_gt = gt_by_id[key]
-                break
-        if source_gt is None:
-            continue
-        out_id = str(source_gt.get("id") or ident)
-        if out_id in seen:
-            continue
-        seen.add(out_id)
-        predicted.append(
-            {
-                "id": out_id,
-                "x": float(source_gt.get("x", 0)),
-                "y": float(source_gt.get("y", 0)),
-                "w": float(source_gt.get("w", 1)),
-                "h": float(source_gt.get("h", 1)),
-                "source": "pred",
-                "kind": source_gt.get("kind", "bbox"),
-                "label": str(source_gt.get("label", "")),
-            }
-        )
-
-    return {
-        "boxes": predicted,
-        "source": "saved_predictions",
-        "status": "ok" if predicted else "empty",
-        "key": {
-            "q_id": q_id,
-            "annotation_path": ann,
-            "image_path": img,
-        },
-        "note": "Dummy mode: loaded from Predictions/gemini-pred. Switch to live Gemini by implementing AI Studio call with GOOGLE_AI_STUDIO_API_KEY.",
-    }
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -1604,55 +1647,73 @@ class Handler(SimpleHTTPRequestHandler):
                     },
                 )
 
-        if parsed.path == "/api/sam-point-box":
+        if parsed.path == "/api/sam-multi-point-box":
             image_bytes, mime_type, source_info = _read_image_input(payload)
             if not image_bytes:
                 return self._write_json(404, {"error": "Image not found", "details": source_info})
 
-            try:
-                x = float(payload.get("x"))
-                y = float(payload.get("y"))
-            except Exception:
-                return self._write_json(400, {"error": "x and y are required numeric coordinates in image space"})
+            raw_points = payload.get("points")
+            if not isinstance(raw_points, list) or not raw_points:
+                return self._write_json(400, {"error": "points must be a non-empty list of {x,y} coordinates"})
+            points = []
+            for p in raw_points:
+                if not isinstance(p, dict):
+                    continue
+                try:
+                    points.append({"x": float(p.get("x")), "y": float(p.get("y"))})
+                except Exception:
+                    continue
+            if not points:
+                return self._write_json(400, {"error": "No valid numeric points provided"})
 
             try:
-                box = suggest_box_for_point(image_bytes, mime_type, x, y)
-                box["meta"] = {**(box.get("meta") or {}), "source": _point_source_tag()}
+                box = suggest_box_for_multi_points_sam2(image_bytes, points)
+                box["meta"] = {**(box.get("meta") or {}), "source": "sam2_multi_point"}
                 return self._write_json(
                     200,
                     {
                         "box": box,
-                        "point": {"x": x, "y": y},
+                        "mask_data_url": "",
+                        "diagnostics": box.get("diagnostics") if isinstance(box.get("diagnostics"), dict) else {},
+                        "points": points,
                         "source": source_info,
-                        "backend": SAM_BACKEND,
-                        "model": "sam2_local" if SAM_BACKEND == "local" else (f"sam1_{SAM1_MODEL_TYPE}" if SAM_BACKEND == "sam1" else HF_SAM2_MODEL),
+                        "backend": "sam2_transformers",
+                        "model": SAM2_TF_MODEL_ID,
                     },
                 )
             except Exception as e:
-                # Fallback path for local testing when SAM backend is unavailable:
-                # choose nearest box from client-provided catalog (GT/predicted list).
-                fallback_catalog = payload.get("gt_boxes")
-                fallback_norm = []
-                if isinstance(fallback_catalog, list):
-                    for item in fallback_catalog:
-                        nb = _normalize_fallback_box(item)
-                        if nb:
-                            fallback_norm.append(nb)
-                fb_best = _pick_best_box_for_point(fallback_norm, x, y) if fallback_norm else None
-                if fb_best:
-                    fb_best["meta"] = {**(fb_best.get("meta") or {}), "source": "sam2_point_fallback"}
-                    return self._write_json(
-                        200,
-                        {
-                            "box": fb_best,
-                            "point": {"x": x, "y": y},
-                            "source": source_info,
-                            "backend": "fallback_catalog",
-                            "model": "none",
-                            "warning": str(e),
+                xs = [p["x"] for p in points]
+                ys = [p["y"] for p in points]
+                x_min = min(xs)
+                y_min = min(ys)
+                w = max(1.0, max(xs) - min(xs))
+                h = max(1.0, max(ys) - min(ys))
+                fallback = {
+                    "id": "sam2_multi_point_fallback",
+                    "bbox": [float(x_min), float(y_min), float(w), float(h)],
+                    "label": "",
+                    "meta": {"source": "sam2_multi_point_fallback"},
+                }
+                return self._write_json(
+                    200,
+                    {
+                        "box": fallback,
+                        "mask_data_url": "",
+                        "diagnostics": {
+                            "points_selected": int(len(points)),
+                            "points_inside_selected_component": 0,
+                            "selected_component_area": 0,
+                            "selected_component_bbox": [],
+                            "num_components": 0,
+                            "local_window_bbox": [],
                         },
-                    )
-                return self._write_json(502, {"error": str(e), "backend": SAM_BACKEND, "model": HF_SAM2_MODEL})
+                        "points": points,
+                        "source": source_info,
+                        "backend": "multi_point_rect_fallback",
+                        "model": SAM2_TF_MODEL_ID,
+                        "warning": str(e),
+                    },
+                )
 
         if parsed.path == "/api/generate-qa":
             image_bytes, mime_type, source_info = _read_image_input(payload)
@@ -1712,11 +1773,22 @@ class Handler(SimpleHTTPRequestHandler):
             return self._write_json(200, result)
 
         if parsed.path == "/api/predict-boxes":
+            image_bytes, mime_type, source_info = _read_image_input(payload)
+            if not image_bytes:
+                return self._write_json(404, {"error": "Image not found", "details": source_info})
             try:
-                result = predict_boxes_from_saved_outputs(payload)
+                result = generate_missing_boxes_via_gemini(
+                    image_bytes=image_bytes,
+                    mime_type=mime_type,
+                    payload=payload,
+                    api_key=str(payload.get("api_key") or "").strip() or None,
+                )
+                result["model"] = GEMINI_MODEL
+                result["provider"] = "google_ai_studio"
+                result["source"] = source_info
                 return self._write_json(200, result)
             except Exception as e:
-                return self._write_json(500, {"error": str(e)})
+                return self._write_json(500, {"error": str(e), "model": GEMINI_MODEL, "provider": "google_ai_studio"})
 
         if parsed.path == "/api/generate-missing-bboxes":
             image_bytes, mime_type, source_info = _read_image_input(payload)

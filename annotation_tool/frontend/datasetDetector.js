@@ -13,6 +13,14 @@ export function detectDatasetType(sample) {
   if (hasKeys(sample, ["q_id", "question_text", "gt_answer", "bbox"])) return "ChartQA-like";
   if (
     hasKeys(sample, ["q_id", "question_text", "ground_truth_answer"]) &&
+    (pathIncludes(sample.image_path, "ai2d/") ||
+      pathIncludes(sample.annotation_path, "ai2d/") ||
+      pathIncludes(sample.question_path, "ai2d/"))
+  ) {
+    return "AI2D-like";
+  }
+  if (
+    hasKeys(sample, ["q_id", "question_text", "ground_truth_answer"]) &&
     (pathIncludes(sample.image_path, "mapwise/") ||
       pathIncludes(sample.annotation_path, "mapwise/") ||
       pathIncludes(sample.question_path, "mapwise/"))

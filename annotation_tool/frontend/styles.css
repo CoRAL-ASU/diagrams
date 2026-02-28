@@ -117,8 +117,8 @@ body {
 }
 
 #geminiApiKey {
-  height: var(--upload-control-height);
-  min-height: var(--upload-control-height);
+  height: 1.9rem;
+  min-height: 1.9rem;
   padding: 0.38rem 0.55rem;
   box-sizing: border-box;
 }
@@ -137,6 +137,7 @@ body {
 .upload-image-btn {
   margin: 0;
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   border: 1px solid #89d8e8;
@@ -144,12 +145,26 @@ body {
   color: #16253a;
   border-radius: 10px;
   padding: 0.5rem 0.85rem;
-  height: var(--upload-control-height);
-  min-height: var(--upload-control-height);
+  height: 2.45rem;
+  min-height: 2.45rem;
   cursor: pointer;
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0.005em;
+  line-height: 1.05;
   align-self: flex-end;
+  text-align: center;
+}
+
+.upload-btn-sub {
+  display: block;
+  margin-top: 0.04rem;
+  font-size: 0.64rem;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  opacity: 0.92;
 }
 
 .upload-image-btn:hover {
@@ -317,18 +332,87 @@ button:disabled {
 }
 
 .nav-btn {
-  height: var(--upload-control-height);
-  min-height: var(--upload-control-height);
-  min-width: var(--upload-control-height);
-  padding: 0 0.45rem;
-  border-radius: 8px;
-  font-size: 0.8rem;
+  height: 1.55rem;
+  min-height: 1.55rem;
+  min-width: 1.55rem;
+  padding: 0 0.22rem;
+  border-radius: 6px;
+  font-size: 0.64rem;
   line-height: 1;
 }
 
 .action-row {
   gap: 0.4rem;
   align-items: stretch;
+}
+
+.meta-main .action-row {
+  width: 100%;
+  justify-content: center;
+}
+
+.action-row-primary {
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.action-row-primary #bboxActionBtn {
+  flex: 0 0 auto;
+}
+
+.action-row-primary #qaActionBtn {
+  flex: 0 0 auto;
+}
+
+.action-row-sam-center {
+  justify-content: center;
+  margin-top: 0.25rem;
+}
+
+.sam-tools {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.32rem;
+  width: 11.2rem;
+}
+
+.sam-tools-wrap {
+  display: grid;
+  gap: 0.28rem;
+  width: 11.2rem;
+}
+
+.sam-tools-title {
+  margin: 0;
+  color: #b7c9e6;
+  font-size: 0.69rem;
+  letter-spacing: 0.03em;
+  font-weight: 600;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.sam-compact-btn {
+  height: var(--upload-control-height);
+  min-height: var(--upload-control-height);
+  min-width: 0;
+  padding: 0 0.45rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.sam-btn-sub {
+  display: block;
+  margin-top: -0.04rem;
+  font-size: 0.56rem;
+  line-height: 1;
+  opacity: 0.92;
+  vertical-align: super;
+  text-transform: none;
 }
 
 .action-row button {
@@ -342,14 +426,27 @@ button:disabled {
   letter-spacing: 0.005em;
 }
 
+.canvas-column > .row button {
+  height: 1.95rem;
+  min-height: 1.95rem;
+  padding: 0 0.55rem;
+  border-radius: 7px;
+  font-size: 0.74rem;
+}
+
 .qa-secondary-btn {
-  border: 1px solid #89d8e8;
-  background: #9be6f2;
-  color: #152335;
+  border: 1px solid #86cde0;
+  background: linear-gradient(90deg, #ecf5ff 0%, #9be6f2 58%, #ffd58b 100%);
+  color: #122235;
 }
 
 .qa-secondary-btn:hover:not(:disabled) {
-  box-shadow: 0 10px 20px rgba(123, 138, 157, 0.32);
+  box-shadow: 0 10px 20px rgba(123, 138, 157, 0.32), 0 0 0 1px rgba(236, 245, 255, 0.5) inset;
+}
+
+.qa-secondary-btn.is-active {
+  border-color: #f2d85a;
+  box-shadow: 0 0 0 1px rgba(242, 216, 90, 0.55) inset, 0 10px 20px rgba(123, 138, 157, 0.32);
 }
 
 .dual-label-btn {

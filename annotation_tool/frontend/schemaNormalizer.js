@@ -71,22 +71,33 @@ function readImagePath(record) {
 }
 
 function normalizeGeneric(record, datasetType) {
+  const firstQuestion =
+    Array.isArray(record.questions) && record.questions.length && typeof record.questions[0] === "object"
+      ? record.questions[0]
+      : null;
+
   const answerValue =
-    typeof record.answers === "object" && record.answers !== null
-      ? record.answers.correct || record.answers.answer || ""
-      : record.ground_truth_answer || record.gt_answer || record.answer || record.response || record.predicted_answer || "";
+    firstQuestion
+      ? firstQuestion.ground_truth_answer ||
+        firstQuestion.correct_answer ||
+        firstQuestion.answer_text ||
+        firstQuestion.answer ||
+        ""
+      : typeof record.answers === "object" && record.answers !== null
+        ? record.answers.correct || record.answers.answer || ""
+        : record.ground_truth_answer || record.gt_answer || record.answer || record.response || record.predicted_answer || "";
 
   return {
     dataset_type: datasetType,
     image: readImagePath(record),
     qa: {
-      question: record.question || record.question_text || record.query || "",
+      question: firstQuestion?.question || firstQuestion?.question_text || record.question || record.question_text || record.query || "",
       answer: answerValue,
-      choices: asArray(record.choices || record.options || []).map((c) => String(c))
+      choices: asArray(firstQuestion?.choices || record.choices || record.options || []).map((c) => String(c))
     },
     annotations: collectAnnotations(record),
     metadata: {
-      id: record.id || record.q_id || record.question_id || "",
+      id: firstQuestion?.q_id || firstQuestion?.question_uid || record.id || record.q_id || record.question_id || "",
       ground_truth_path: record.ground_truth_path || record.ground_truth || "",
       annotation_path: record.annotation_path || record.annotation || "",
       bounding_box_path: record.bounding_box_path || record.bbox_path || "",

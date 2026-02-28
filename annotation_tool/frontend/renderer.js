@@ -14,7 +14,6 @@ export function setRawJsonView(el, obj) {
 }
 
 export function populateQaFields(state, elements) {
-  elements.datasetType.value = state.dataset_type || "Unknown";
   elements.questionField.value = state.qa?.question || "";
   elements.answerField.value = state.qa?.answer || "";
   elements.choicesField.value = (state.qa?.choices || []).join(", ");

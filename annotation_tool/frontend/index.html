@@ -3,13 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Diagram Attribution Tool</title>
+    <title>DIAGRAMS</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <main class="app">
       <header class="topbar">
-        <h1>Diagram Attribution Tool</h1>
+        <h1>DIAGRAMS</h1>
         <div class="workflow-tags" aria-label="Workflow">
           <span>UPLOAD</span>
           <span>ANNOTATE</span>
@@ -20,10 +20,13 @@
       <section class="panel upload-panel">
         <label class="api-key-wrap">
           <span class="api-key-label">Enter Google AI Studio Key</span>
-          <input id="geminiApiKey" type="password" placeholder="AIza..." autocomplete="off" />
+          <input id="geminiApiKey" type="password" placeholder="Enter API Key..." autocomplete="off" />
         </label>
-        <label class="upload-image-btn" for="imageUpload">Upload Image</label>
-        <input id="imageUpload" class="visually-hidden" type="file" accept="image/*" />
+        <label class="upload-image-btn" for="imageUpload">
+          UPLOAD
+          <span class="upload-btn-sub">Image/JSON</span>
+        </label>
+        <input id="imageUpload" class="visually-hidden" type="file" accept="image/*,.json,application/json" />
         <div class="row">
           <button id="prevBtn" class="nav-btn" disabled aria-label="Previous">◀</button>
           <button id="nextBtn" class="nav-btn" disabled aria-label="Next">▶</button>
@@ -39,7 +42,7 @@
             <button id="deleteBoxBtn" disabled>Delete Selected</button>
             <button id="clearBoxesBtn" disabled>Clear Boxes</button>
           </div>
-          <p class="canvas-help">Tip: click an object to run SAM box suggestion, or use Draw Box for manual boxes.</p>
+          <p class="canvas-help">Tip: Click Select Data Points, choose as many points as needed, then click Generate Box.</p>
           <div id="canvasContainer" class="canvas-container">
             <canvas id="annotationCanvas"></canvas>
             <p id="canvasHint">Upload an image to begin.</p>
@@ -50,8 +53,8 @@
           <div class="meta-split">
             <div class="meta-main">
               <label>
-                Dataset Type
-                <input id="datasetType" type="text" readonly />
+                Dataset Name
+                <input id="datasetType" type="text" placeholder="Enter Dataset Name.." />
               </label>
               <label>
                 Question
@@ -66,14 +69,25 @@
                 <input id="choicesField" type="text" />
               </label>
               <div class="row action-row">
-                <button id="qaActionBtn" class="qa-secondary-btn dual-label-btn" disabled>
-                  <span class="btn-top">GENERATE</span>
-                  <span class="btn-bottom">Q&amp;A</span>
-                </button>
-                <button id="bboxActionBtn" class="qa-secondary-btn dual-label-btn" disabled>
-                  <span class="btn-top">GENERATE</span>
-                  <span class="btn-bottom">BOUNDING BOX</span>
-                </button>
+               <button id="bboxActionBtn" class="qa-secondary-btn dual-label-btn" disabled>EVIDENCE SELECTION</button>
+              </div>
+              <div class="row action-row">
+                <button id="qaActionBtn" class="qa-secondary-btn" disabled>GENERATE Q&amp;A</button>
+              </div>
+              <div class="row action-row">
+                <div class="sam-tools-wrap">
+                  <p class="sam-tools-title">Add New Bounding Boxes</p>
+                  <div class="sam-tools" aria-label="SAM tools">
+                    <button id="samSelectPointsBtn" class="qa-secondary-btn sam-compact-btn" disabled>
+                      SELECT
+                      <span class="sam-btn-sub">Data Points</span>
+                    </button>
+                    <button id="samGenerateBtn" class="qa-secondary-btn sam-compact-btn" disabled>
+                      GENERATE
+                      <span class="sam-btn-sub">Box</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
             <aside class="gt-side">

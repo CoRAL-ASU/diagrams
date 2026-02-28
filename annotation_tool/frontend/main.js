@@ -25,6 +25,8 @@ const els = {
   choicesField: document.getElementById("choicesField"),
   qaActionBtn: document.getElementById("qaActionBtn"),
   bboxActionBtn: document.getElementById("bboxActionBtn"),
+  samSelectPointsBtn: document.getElementById("samSelectPointsBtn"),
+  samGenerateBtn: document.getElementById("samGenerateBtn"),
   exportAllBtn: document.getElementById("exportAllBtn"),
   drawModeBtn: document.getElementById("drawModeBtn"),
   undoBtn: document.getElementById("undoBtn"),
@@ -52,7 +54,9 @@ const state = {
   suppressHistory: false,
   health: null,
   pendingNewBoxId: "",
-  sessionGeminiApiKey: ""
+  sessionGeminiApiKey: "",
+  samPoints: [],
+  samPointSelectionArmed: false
 };
 
 const MAX_GENERATE_IMAGE_DIM = 1400;
@@ -79,137 +83,10 @@ const engine = new AnnotationEngine(
   },
   async ({ x, y }) => {
     if (!state.currentUniversal || state.drawMode) return;
-    const catalog = Array.from(collectGtCatalog(state.records[state.currentIndex], state.currentUniversal).values()).map((b) => ({
-      id: b.id,
-      x: b.bbox?.[0],
-      y: b.bbox?.[1],
-      w: b.bbox?.[2],
-      h: b.bbox?.[3],
-      label: b.label || "",
-      source: b.meta?.source || "gt"
-    }));
-
-    const addBoxToCanvas = (box, metaSource = "added") => {
-      if (!box || !Array.isArray(box.bbox) || box.bbox.length < 4) return null;
-      const [bx, by, bw, bh] = box.bbox.map((n) => Number(n) || 0);
-      const current = state.currentUniversal.annotations || [];
-      const usedIds = new Set(current.map((b) => String(b?.id || "").trim().toLowerCase()));
-      let id = String(box.id || `sam_${Date.now()}`).trim();
-
-      const nextAddedId = () => {
-        let i = 1;
-        while (usedIds.has(`a_${i}`)) i += 1;
-        return `a_${i}`;
-      };
-
-      // Keep added boxes uniquely identifiable and visually separate in the checklist.
-      if (metaSource === "added") {
-        id = nextAddedId();
-      } else if (usedIds.has(id.toLowerCase())) {
-        // Existing GT/pred ID already selected; do not duplicate.
-        return id;
-      }
-
-      const next = {
-        id,
-        bbox: [bx, by, bw, bh],
-        label: String(box.label || ""),
-        meta: { ...(box.meta || {}), source: metaSource, kind: "bbox" }
-      };
-      state.currentUniversal.annotations = [...current, next];
-      engine.setBoxes(state.currentUniversal.annotations);
-      renderGtBoxList();
-      pushHistory();
-      return id;
-    };
-
-    const containingGtBox = () => {
-      let best = null;
-      let bestArea = Number.POSITIVE_INFINITY;
-      for (const c of catalog) {
-        const source = String(c.source || "").toLowerCase();
-        if (source !== "gt") continue;
-        const bx = Number(c.x);
-        const by = Number(c.y);
-        const bw = Number(c.w);
-        const bh = Number(c.h);
-        if (![bx, by, bw, bh].every(Number.isFinite) || bw <= 0 || bh <= 0) continue;
-        const inside = x >= bx && x <= bx + bw && y >= by && y <= by + bh;
-        if (!inside) continue;
-        const area = bw * bh;
-        if (area < bestArea) {
-          bestArea = area;
-          best = { id: String(c.id || "").trim(), bbox: [bx, by, bw, bh], label: String(c.label || ""), meta: { source: "gt" } };
-        }
-      }
-      return best;
-    };
-
-    const nearestGtBox = () => {
-      let best = null;
-      let bestDist = Number.POSITIVE_INFINITY;
-      for (const c of catalog) {
-        const source = String(c.source || "").toLowerCase();
-        if (source !== "gt") continue;
-        const bx = Number(c.x);
-        const by = Number(c.y);
-        const bw = Number(c.w);
-        const bh = Number(c.h);
-        if (![bx, by, bw, bh].every(Number.isFinite) || bw <= 0 || bh <= 0) continue;
-        const cx = bx + bw / 2;
-        const cy = by + bh / 2;
-        const d2 = (cx - x) ** 2 + (cy - y) ** 2;
-        if (d2 < bestDist) {
-          bestDist = d2;
-          best = { id: String(c.id || "").trim(), bbox: [bx, by, bw, bh], label: String(c.label || ""), meta: { source: "gt" } };
-        }
-      }
-      return best;
-    };
-
-    // First preference: if user tapped a GT region, use GT directly.
-    const directGt = containingGtBox();
-    if (directGt) {
-      const id = addBoxToCanvas(directGt, "gt");
-      setAiStatus("gt_box_selected_by_click", { id: id || "", x, y, source: "gt" });
-      return;
-    }
-
-    try {
-      const response = await postJson("/api/sam-point-box", {
-        image_path: state.currentUniversal.image || "",
-        x,
-        y
-      }, { timeoutMs: 8000 });
-
-      const id = addBoxToCanvas(response?.box || null, "added");
-      if (!id) return;
-      if (response.backend === "fallback_catalog") {
-        setAiStatus("sam_point_box_fallback", {
-          id,
-          x,
-          y,
-          backend: response.backend || "",
-          warning: response.warning || "SAM unavailable; fallback catalog used."
-        });
-      } else {
-        setAiStatus("sam_point_box_added", { id, x, y, backend: response.backend || "" });
-      }
-    } catch (err) {
-      const fallback = nearestGtBox();
-      if (fallback) {
-        const id = addBoxToCanvas(fallback, "gt");
-        setAiStatus("sam_point_box_fallback", {
-          id: id || "",
-          x,
-          y,
-          backend: "nearest_gt_fallback",
-          warning: err.message || "SAM request timed out; nearest GT used."
-        });
-      } else {
-        setAiStatus("sam_point_box_failed", { error: err.message || "No nearest GT available. Draw box manually.", x, y, action: "manual_draw_needed" });
-      }
-    }
+    if (!state.samPointSelectionArmed) return;
+    state.samPoints.push({ x, y });
+    setAiStatus("sam_point_added", { count: state.samPoints.length, last_point: { x, y } });
+    els.recordInfo.textContent = `SAM point captured (${state.samPoints.length}). Click Generate BBoxes to run SAM.`;
   }
 );
 
@@ -233,6 +110,39 @@ function stashGeminiApiKeyFromInput() {
     els.geminiApiKey.value = "";
     els.geminiApiKey.placeholder = "Key saved for this session";
   }
+}
+
+function addBoxToCanvas(box, metaSource = "added") {
+  if (!state.currentUniversal) return null;
+  if (!box || !Array.isArray(box.bbox) || box.bbox.length < 4) return null;
+  const [bx, by, bw, bh] = box.bbox.map((n) => Number(n) || 0);
+  const current = state.currentUniversal.annotations || [];
+  const usedIds = new Set(current.map((b) => String(b?.id || "").trim().toLowerCase()));
+  let id = String(box.id || `sam_${Date.now()}`).trim();
+
+  const nextAddedId = () => {
+    let i = 1;
+    while (usedIds.has(`a_${i}`)) i += 1;
+    return `a_${i}`;
+  };
+
+  if (metaSource === "added") {
+    id = nextAddedId();
+  } else if (usedIds.has(id.toLowerCase())) {
+    return id;
+  }
+
+  const next = {
+    id,
+    bbox: [bx, by, bw, bh],
+    label: String(box.label || ""),
+    meta: { ...(box.meta || {}), source: metaSource, kind: "bbox" }
+  };
+  state.currentUniversal.annotations = [...current, next];
+  engine.setBoxes(state.currentUniversal.annotations);
+  renderGtBoxList();
+  pushHistory();
+  return id;
 }
 
 function normalizeRawBox(item) {
@@ -380,7 +290,7 @@ function setButtonsEnabled(loaded) {
   els.prevBtn.disabled = !loaded;
   els.nextBtn.disabled = !loaded;
 
-  [els.qaActionBtn, els.bboxActionBtn, els.exportAllBtn, els.drawModeBtn, els.undoBtn, els.deleteBoxBtn, els.clearBoxesBtn].forEach((btn) => {
+  [els.qaActionBtn, els.bboxActionBtn, els.samSelectPointsBtn, els.samGenerateBtn, els.exportAllBtn, els.drawModeBtn, els.undoBtn, els.deleteBoxBtn, els.clearBoxesBtn].forEach((btn) => {
     if (btn) btn.disabled = !loaded;
   });
   updateAiAssistButtons();
@@ -400,7 +310,7 @@ function updateRecordInfo() {
     return;
   }
 
-  els.recordInfo.textContent = `Record ${state.currentIndex + 1}/${state.records.length} | ${state.currentUniversal.dataset_type}`;
+  els.recordInfo.textContent = `Question ${state.currentIndex + 1}/${state.records.length}`;
 }
 
 function setAiStatus(status, detail = {}) {
@@ -434,11 +344,9 @@ function hasMissingQa() {
 }
 
 function updateAiAssistButtons() {
+  // static labels in HTML
   if (els.qaActionBtn) {
-    els.qaActionBtn.innerHTML = '<span class="btn-top">GENERATE</span><span class="btn-bottom">Q&A</span>';
-  }
-  if (els.bboxActionBtn) {
-    els.bboxActionBtn.innerHTML = '<span class="btn-top">GENERATE</span><span class="btn-bottom">BOUNDING BOX</span>';
+    els.qaActionBtn.textContent = "GENERATE Q&A";
   }
 }
 
@@ -502,10 +410,16 @@ async function renderCurrentRecord() {
   const datasetType = detectDatasetType(raw);
   const universal = normalizeToUniversal(raw, datasetType);
   const predicted = Array.isArray(raw.predicted_boxes) ? raw.predicted_boxes.map(normalizePredictedBox).filter(Boolean) : [];
-  // Prediction-first view: show only predicted boxes on the image canvas.
+  // Prediction-first view: show only live Gemini-predicted boxes on the image canvas.
   // Ground-truth remains available in the right-side checkbox list.
   universal.annotations = predicted;
   state.currentUniversal = universal;
+  state.samPoints = [];
+  state.samPointSelectionArmed = false;
+  engine.setPointPickMode(false);
+  if (els.samSelectPointsBtn) {
+    els.samSelectPointsBtn.classList.remove("is-active");
+  }
   setAiStatus("idle", { message: "AI assist ready for this record." });
 
   setRawJsonView(els.rawJsonView, raw);
@@ -572,6 +486,81 @@ async function readFileAsDataUrl(file) {
     reader.onerror = () => reject(new Error("Failed to read image file"));
     reader.readAsDataURL(file);
   });
+}
+
+async function readFileAsText(file) {
+  return await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Failed to read JSON file"));
+    reader.readAsText(file);
+  });
+}
+
+function isJsonUpload(file) {
+  if (!file) return false;
+  const name = String(file.name || "").toLowerCase();
+  const type = String(file.type || "").toLowerCase();
+  return name.endsWith(".json") || type.includes("application/json");
+}
+
+function normalizeJsonUploadRecords(parsed) {
+  const sourceItems = Array.isArray(parsed)
+    ? parsed
+    : Array.isArray(parsed?.records)
+      ? parsed.records
+      : parsed && typeof parsed === "object"
+        ? [parsed]
+        : [];
+
+  const out = [];
+  sourceItems.forEach((item) => {
+    if (!item || typeof item !== "object") return;
+
+    const imageLevel = {
+      image_uid: item.image_uid || "",
+      image_id: item.image_id || "",
+      image_path: item.image_path || item.image || "",
+      annotation_path: item.annotation_path || "",
+      question_path: item.question_path || "",
+      bbox: Array.isArray(item.bbox) ? item.bbox : [],
+      predicted_boxes: Array.isArray(item.predicted_boxes) ? item.predicted_boxes : [],
+      dataset_type: item.dataset_type || item.dataset_name || ""
+    };
+
+    if (Array.isArray(item.questions) && item.questions.length) {
+      item.questions.forEach((q) => {
+        if (!q || typeof q !== "object") return;
+        const answerText = q.answer_text ?? q.answer ?? "";
+        const correctAnswer = q.correct_answer ?? answerText;
+        const gtAnswer = q.ground_truth_answer ?? correctAnswer;
+        out.push({
+          ...imageLevel,
+          question_uid: q.question_uid || "",
+          q_id: q.q_id || q.question_uid || "",
+          question_text: q.question_text || q.question || "",
+          choices: Array.isArray(q.choices) ? q.choices : [],
+          answer_text: String(answerText),
+          correct_answer: String(correctAnswer),
+          ground_truth_answer: String(gtAnswer)
+        });
+      });
+      return;
+    }
+
+    // Backward-compatible flat record path.
+    out.push({
+      ...imageLevel,
+      q_id: item.q_id || "",
+      question_text: item.question_text || item.question || "",
+      choices: Array.isArray(item.choices) ? item.choices : [],
+      answer_text: String(item.answer_text ?? item.answer ?? ""),
+      correct_answer: String(item.correct_answer ?? item.answer_text ?? item.answer ?? ""),
+      ground_truth_answer: String(item.ground_truth_answer ?? item.correct_answer ?? item.answer_text ?? item.answer ?? "")
+    });
+  });
+
+  return out;
 }
 
 async function buildCompressedGenerateImageDataUrl() {
@@ -654,6 +643,42 @@ els.imageUpload.addEventListener("change", async (e) => {
 
   const prevInfo = els.recordInfo.textContent;
   try {
+    if (isJsonUpload(file)) {
+      const rawText = await readFileAsText(file);
+      let parsed;
+      try {
+        parsed = JSON.parse(rawText);
+      } catch (err) {
+        throw new Error("Invalid JSON file");
+      }
+
+      let records = normalizeJsonUploadRecords(parsed);
+
+      if (!records.length) {
+        state.rawData = null;
+        state.records = [];
+        setButtonsEnabled(false);
+        els.recordInfo.textContent = "JSON upload has no records.";
+        return;
+      }
+
+      // If records contain GT but not predictions, attach live predictions.
+      const hasPredicted = records.some((r) => Array.isArray(r?.predicted_boxes) && r.predicted_boxes.length > 0);
+      if (!hasPredicted) {
+        els.recordInfo.textContent = "Loaded JSON. Running live Gemini box prediction...";
+        records = await attachPredictionsToRecords(records);
+      }
+
+      state.rawData = records;
+      state.records = normalizeRecords(records);
+      state.currentIndex = 0;
+      state.uploadedImageDataUrl = "";
+      state.uploadedImageName = file.name || "uploaded_json";
+      await renderCurrentRecord();
+      els.recordInfo.textContent = `Loaded ${state.records.length} record(s) from JSON.`;
+      return;
+    }
+
     state.uploadedImageDataUrl = await readFileAsDataUrl(file);
     state.uploadedImageName = file.name || "uploaded_image";
     els.recordInfo.textContent = "Matching uploaded image and loading GT + QA...";
@@ -670,7 +695,7 @@ els.imageUpload.addEventListener("change", async (e) => {
       els.recordInfo.textContent = "No records found for uploaded image.";
       return;
     }
-    els.recordInfo.textContent = "Loaded image. Running predicted box retrieval...";
+    els.recordInfo.textContent = "Loaded image. Running live Gemini box prediction...";
     records = await attachPredictionsToRecords(records);
     state.rawData = records;
     state.records = normalizeRecords(records);
@@ -691,6 +716,9 @@ els.imageUpload.addEventListener("change", async (e) => {
     else if (!state.records.length) els.recordInfo.textContent = prevInfo;
     setButtonsEnabled(Boolean(state.currentUniversal));
   }, 600);
+  if (els.imageUpload) {
+    els.imageUpload.value = "";
+  }
 });
 
 els.prevBtn.addEventListener("click", async () => {
@@ -716,7 +744,7 @@ els.prevBtn.addEventListener("click", async () => {
       els.recordInfo.textContent = "No previous image records found.";
       return;
     }
-    els.recordInfo.textContent = "Loaded previous image. Running predicted box retrieval...";
+    els.recordInfo.textContent = "Loaded previous image. Running live Gemini box prediction...";
     records = await attachPredictionsToRecords(records);
     state.rawData = records;
     state.records = normalizeRecords(records);
@@ -757,7 +785,7 @@ els.nextBtn.addEventListener("click", async () => {
       els.recordInfo.textContent = "No next image records found.";
       return;
     }
-    els.recordInfo.textContent = "Loaded next image. Running predicted box retrieval...";
+    els.recordInfo.textContent = "Loaded next image. Running live Gemini box prediction...";
     records = await attachPredictionsToRecords(records);
     state.rawData = records;
     state.records = normalizeRecords(records);
@@ -777,9 +805,96 @@ els.nextBtn.addEventListener("click", async () => {
 
 els.drawModeBtn.addEventListener("click", () => {
   state.drawMode = !state.drawMode;
+  state.samPoints = [];
+  state.samPointSelectionArmed = false;
+  engine.setPointPickMode(false);
+  if (els.samSelectPointsBtn) {
+    els.samSelectPointsBtn.classList.remove("is-active");
+  }
   engine.setDrawMode(state.drawMode);
   els.drawModeBtn.textContent = `Draw Box: ${state.drawMode ? "On" : "Off"}`;
 });
+
+if (els.samSelectPointsBtn) {
+  els.samSelectPointsBtn.addEventListener("click", () => {
+    if (!state.currentUniversal) return;
+    if (state.samPointSelectionArmed) {
+      state.samPointSelectionArmed = false;
+      engine.setPointPickMode(false);
+      els.samSelectPointsBtn.classList.remove("is-active");
+      els.recordInfo.textContent = `SAM point selection stopped. ${state.samPoints.length} point(s) selected.`;
+      setAiStatus("sam_point_mode_stopped", { points_selected: state.samPoints.length });
+      return;
+    }
+    state.drawMode = false;
+    engine.setDrawMode(false);
+    els.drawModeBtn.textContent = "Draw Box: Off";
+    state.samPointSelectionArmed = true;
+    engine.setPointPickMode(true);
+    els.samSelectPointsBtn.classList.add("is-active");
+    setAiStatus("sam_point_mode_armed", { message: "Select one or more points, then click SAM Generate BBoxes." });
+    els.recordInfo.textContent = "SAM point selection active: click as many points as needed.";
+  });
+}
+
+if (els.samGenerateBtn) {
+  els.samGenerateBtn.addEventListener("click", async () => {
+    if (!state.currentUniversal) return;
+    if (!state.samPoints.length) {
+      setAiStatus("sam_generate_skipped", { reason: "no_points_selected" });
+      els.recordInfo.textContent = "Select one or more data points first.";
+      return;
+    }
+
+    const points = state.samPoints.map((p) => ({ x: Number(p.x), y: Number(p.y) })).filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
+    if (!points.length) {
+      setAiStatus("sam_generate_skipped", { reason: "invalid_points" });
+      els.recordInfo.textContent = "Selected points are invalid. Re-select points.";
+      return;
+    }
+
+    state.samPointSelectionArmed = false;
+    engine.setPointPickMode(false);
+    if (els.samSelectPointsBtn) {
+      els.samSelectPointsBtn.classList.remove("is-active");
+    }
+
+    const prevInfo = els.recordInfo.textContent;
+    els.samGenerateBtn.disabled = true;
+    els.recordInfo.textContent = `Generating SAM bbox from ${points.length} point(s)...`;
+    try {
+      const response = await postJson("/api/sam-multi-point-box", {
+        image_path: state.currentUniversal.image || "",
+        points
+      });
+      const id = addBoxToCanvas(response?.box || null, "added");
+      if (!id) {
+        throw new Error("SAM did not return a valid bounding box.");
+      }
+      if (typeof engine.onNewBoxLabelRequest === "function") {
+        engine.onNewBoxLabelRequest({ boxId: id, currentLabel: "" });
+      }
+      setAiStatus("sam_multi_point_box_added", {
+        id,
+        points_count: points.length,
+        backend: response.backend || "",
+        warning: response.warning || "",
+        diagnostics: response.diagnostics || {}
+      });
+      els.recordInfo.textContent = `SAM bbox generated from ${points.length} point(s).`;
+      state.samPoints = [];
+    } catch (err) {
+      setAiStatus("sam_multi_point_box_failed", { error: err.message || "SAM multi-point request failed.", points_count: points.length });
+      els.recordInfo.textContent = `SAM bbox generation failed: ${err.message || "Unknown error"}`;
+    } finally {
+      setTimeout(() => {
+        if (state.currentUniversal) updateRecordInfo();
+        else els.recordInfo.textContent = prevInfo;
+        setButtonsEnabled(Boolean(state.currentUniversal));
+      }, 800);
+    }
+  });
+}
 
 els.deleteBoxBtn.addEventListener("click", () => {
   engine.deleteSelected();
@@ -800,6 +915,7 @@ els.exportAllBtn.addEventListener("click", () => {
   if (!state.currentUniversal) return;
 
   state.currentUniversal.qa = readQaFields(els);
+  state.currentUniversal.dataset_type = String(els.datasetType?.value || "");
   state.currentUniversal.annotations = engine.getBoxes();
 
   const baseName = state.currentUniversal.metadata?.id || `record_${state.currentIndex + 1}`;

@@ -12,9 +12,11 @@ export class AnnotationEngine {
     this.onPointRequest = onPointRequest;
 
     this.image = null;
+    this.maskOverlay = null;
     this.boxes = [];
     this.selectedId = null;
     this.drawMode = false;
+    this.pointPickMode = false;
 
     this.dragState = null;
     this.hoverHandle = null;
@@ -101,6 +103,14 @@ export class AnnotationEngine {
     this.drawMode = enabled;
   }
 
+  setPointPickMode(enabled) {
+    this.pointPickMode = Boolean(enabled);
+    if (this.pointPickMode) {
+      this.selectedId = null;
+    }
+    this.render();
+  }
+
   setImage(img) {
     this.image = img;
     this.canvas.width = img.width;
@@ -110,8 +120,33 @@ export class AnnotationEngine {
 
   clearCanvas(width = 960, height = 540) {
     this.image = null;
+    this.maskOverlay = null;
     this.canvas.width = width;
     this.canvas.height = height;
+    this.render();
+  }
+
+  setMaskOverlay(dataUrl) {
+    const src = String(dataUrl || "").trim();
+    if (!src) {
+      this.maskOverlay = null;
+      this.render();
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      this.maskOverlay = img;
+      this.render();
+    };
+    img.onerror = () => {
+      this.maskOverlay = null;
+      this.render();
+    };
+    img.src = src;
+  }
+
+  clearMaskOverlay() {
+    this.maskOverlay = null;
     this.render();
   }
 
@@ -232,6 +267,15 @@ export class AnnotationEngine {
     if (!this.image) return;
     const p = this.toCanvasPoint(evt);
 
+    if (this.pointPickMode && !this.drawMode) {
+      if (typeof this.onPointRequest === "function") {
+        this.onPointRequest({ x: p.x, y: p.y });
+      }
+      this.selectedId = null;
+      this.render();
+      return;
+    }
+
     if (this.drawMode) {
       const newId = this.nextAnnotationId();
       const box = { id: newId, bbox: [p.x, p.y, 1, 1], label: "", meta: { source: "new" } };
@@ -269,7 +313,7 @@ export class AnnotationEngine {
 
     if (!this.dragState) {
       const hit = this.findTopHit(p);
-      this.canvas.style.cursor = this.drawMode ? "crosshair" : hit?.mode === "resize" ? "nwse-resize" : hit?.mode === "move" ? "move" : "default";
+      this.canvas.style.cursor = this.drawMode || this.pointPickMode ? "crosshair" : hit?.mode === "resize" ? "nwse-resize" : hit?.mode === "move" ? "move" : "default";
       return;
     }
 
@@ -334,6 +378,12 @@ export class AnnotationEngine {
     if (!image) return;
 
     ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    if (this.maskOverlay) {
+      ctx.save();
+      ctx.globalAlpha = 0.32;
+      ctx.drawImage(this.maskOverlay, 0, 0, canvas.width, canvas.height);
+      ctx.restore();
+    }
 
     this.boxes.forEach((box) => {
       const [x, y, w, h] = box.bbox;
