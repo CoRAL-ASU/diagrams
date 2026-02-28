@@ -1,9 +1,9 @@
 # Diagrams: A Review Framework for Reasoning-Level Attribution in Diagram QA
 
 <p align="center">
-  <a href="https://your-project-page.com">🌐 Project Page</a> •
+  <a href="https://coral-lab-asu.github.io/diagrams/">🌐 Project Page</a> •
   <a href="https://youtu.be/oli_ekuLYjo">🎬 Video</a> •
-  <a href="https://github.com/your-repo">💻 Demo</a> •
+  <a href="https://github.com/CoRAL-ASU/diagrams">💻 Demo</a> •
 </p>
 
 ---
@@ -97,7 +97,7 @@ scripts/
 Start the local server:
 
 ```bash
-cd /Users/tampu/Documents/Diagram_Attribution/annotation_tool
+cd ../annotation_tool
 python3 server.py
 ```
 
@@ -114,7 +114,7 @@ http://127.0.0.1:8000/frontend/
 If your dataset images are outside default roots:
 
 ```bash
-export ANNOTATION_DATA_ROOTS="/Users/tampu/Documents/Reviewed/Reviewed"
+export ANNOTATION_DATA_ROOTS="../Reviewed"
 python3 server.py
 ```
 
