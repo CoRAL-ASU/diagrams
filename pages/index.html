@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DIAGRAMS: A Review Framework for Reasoning-Level Attribution in Diagram QA</title>
+    <meta
+      name="description"
+      content="DIAGRAMS: a review framework for reasoning-level attribution in Diagram QA across AI2D, ChartQA, Circuit-VQA, InfographicsVQA, MapIQ, and MapWise."
+    />
+    <meta
+      property="og:title"
+      content="DIAGRAMS: A Review Framework for Reasoning-Level Attribution in Diagram QA"
+    />
+    <meta
+      property="og:description"
+      content="ACL demo project page for DIAGRAMS with overview, architecture, datasets, results, and citation."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://coral-asu.github.io/diagrams/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;700&family=Google+Sans:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="bg-grid" aria-hidden="true"></div>
+    <header class="hero shell">
+      <h1 class="publication-title">DIAGRAMS</h1>
+      <p class="subtitle">
+        A review framework for reasoning-level attribution in Diagram QA,
+        linking each QA pair to all visual regions required for reasoning.
+      </p>
+
+      <p class="authors" aria-label="Authors">
+        <span class="author-name"
+          >Anirudh Iyengar Kaniyar Narayana Iyengar<sup class="author-eq">*</sup></span
+        >
+        <span class="author-name">Tampu Ravi Kumar<sup class="author-eq">*</sup></span>
+        <span class="author-name">Manan Suri</span>
+        <span class="author-name">Raviteja Bommireddy</span>
+        <span class="author-name">Dinesh Manocha</span>
+        <span class="author-name">Puneet Mathur<sup class="author-eq">*</sup></span>
+        <span class="author-name">Vivek Gupta<sup class="author-eq">*</sup></span>
+      </p>
+      <div class="actions">
+        <a
+          class="btn primary"
+          href="https://github.com/CoRAL-ASU/diagrams"
+          target="_blank"
+          rel="noreferrer"
+          >Code</a
+        >
+        <!-- <a class="btn ghost" href="#overview">Demo</a> -->
+        <!-- <a
+          class="btn ghost"
+          href="Diagram_Attribution_Tool_Demo_Paper_2026_ACL.pdf"
+          target="_blank"
+          rel="noreferrer"
+          >Paper</a
+        > -->
+        <a class="btn ghost" href="https://youtu.be/oli_ekuLYjo">Video</a>
+      </div>
+    </header>
+
+    <main class="shell stack">
+      <section class="panel" id="architecture">
+        <figure class="figure-placeholder">
+          <img
+            src="images/DA-demo.png"
+            alt="DIAGRAMS demo and reasoning-level attribution overview"
+          />
+        </figure>
+      </section>
+
+      <section class="panel" id="overview">
+        <h2>Overview</h2>
+        <p>
+          <strong>DIAGRAMS</strong> is a review framework for Diagram Question
+          Answering (Diagram QA) that introduces
+          <strong>reasoning-level attribution</strong>. Instead of only checking
+          whether a final answer matches ground truth, the framework evaluates
+          whether the model's reasoning is grounded in the right sequence of
+          diagram regions.
+        </p>
+        <p>
+          DIAGRAMS decouples UI logic from dataset-specific JSON using an
+          internal meta-schema and dataset adapters. In a review-first
+          workflow, model suggestions are verified by humans instead of drawing
+          all regions from scratch.
+        </p>
+      </section>
+
+      <section class="panel" id="how-to-use">
+        <h2>How to use?</h2>
+        <p class="howto-intro">
+          Follow this workflow to use the DIAGRAMS tool for annotation and
+          review.
+        </p>
+        <ol class="howto-steps">
+          <li>
+            <div class="howto-step-body">
+              <h3 class="howto-step-title">Load</h3>
+              <p class="howto-step-desc">
+                Load a dataset record including the image, question-answer pair,
+                and candidate evidence regions into the tool.
+              </p>
+            </div>
+          </li>
+          <li>
+            <div class="howto-step-body">
+              <h3 class="howto-step-title">Inspect</h3>
+              <p class="howto-step-desc">
+                Inspect the model-proposed evidence regions and verify whether
+                each region is relevant to the selected QA pair.
+              </p>
+            </div>
+          </li>
+          <li>
+            <div class="howto-step-body">
+              <h3 class="howto-step-title">Modify</h3>
+              <p class="howto-step-desc">
+                Edit, add, or remove regions as needed to create a correct
+                and complete reasoning path.
+              </p>
+            </div>
+          </li>
+          <li>
+            <div class="howto-step-body">
+              <h3 class="howto-step-title">Generate</h3>
+              <p class="howto-step-desc">
+                If QA pairs or bounding boxes are missing, use generation options
+                to create them with the multimodal model.
+              </p>
+            </div>
+          </li>
+          <li>
+            <div class="howto-step-body">
+              <h3 class="howto-step-title">Verify</h3>
+              <p class="howto-step-desc">
+                Verify the final reasoning chain from supporting regions to the
+                final answer region before finalizing.
+              </p>
+            </div>
+          </li>
+          <li>
+            <div class="howto-step-body">
+              <h3 class="howto-step-title">Export</h3>
+              <p class="howto-step-desc">
+                Export finalized annotations as structured JSON files for
+                downstream training and evaluation.
+              </p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <section class="panel">
+        <h2>Video Demo</h2>
+        <div class="video-frame-box">
+          <iframe
+            class="video-embed"
+            src="https://www.youtube.com/embed/oli_ekuLYjo?si=v0k7w5EGZtnxkLte"
+            title="YouTube video player"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerpolicy="strict-origin-when-cross-origin"
+            allowfullscreen
+          ></iframe>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Team</h2>
+        <div class="team-grid">
+          <article class="member">
+            <img class="avatar" src="images/anirudh_crop.png" alt="Anirudh Iyengar" />
+            <h3>Anirudh Iyengar</h3>
+            <p>Arizona State University</p>
+          </article>
+          <article class="member">
+            <img class="avatar" src="images/Tampu.jpeg" alt="Tampu Ravi Kumar" />
+            <h3>Tampu Ravi Kumar</h3>
+            <p>Arizona State University</p>
+          </article>
+          <article class="member">
+            <img class="avatar" src="images/manansuri.jpeg.png" alt="Manan Suri" />
+            <h3>Manan Suri</h3>
+            <p>University of Maryland, College Park</p>
+          </article>
+          <article class="member">
+            <div class="avatar"></div>
+            <h3>Raviteja Bommireddy</h3>
+            <p>IIITDM</p>
+          </article>
+          <article class="member">
+            <img class="avatar" src="images/dm2018-face.jpg" alt="Dinesh Manocha" />
+            <h3>Dinesh Manocha</h3>
+            <p>University of Maryland, College Park</p>
+          </article>
+          <article class="member">
+            <img class="avatar" src="images/puneeth_mathur.jpeg" alt="Puneet Mathur" />
+            <h3>Puneet Mathur</h3>
+            <p>Adobe Research</p>
+          </article>
+          <article class="member">
+            <img class="avatar" src="images/Vivek_gupta.png" alt="Vivek Gupta" />
+            <h3>Vivek Gupta</h3>
+            <p>Arizona State University</p>
+          </article>
+        </div>
+      </section>
+
+    </main>
+  </body>
+</html>
