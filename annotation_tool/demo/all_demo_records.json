@@ -1,0 +1,559 @@
+[
+  {
+    "image_uid": "img_001",
+    "image_id": "map_19__Original__with_annotations.png",
+    "image_path": "MapWise/images/map_19__Original__with_annotations.png",
+    "annotation_path": "MapWise/annotations/map_19__Original__with_annotations.json",
+    "bbox": [
+      {
+        "id": "bbox_0",
+        "x": 827,
+        "y": 120,
+        "w": 43,
+        "h": 72,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "ME"
+      },
+      {
+        "id": "bbox_1",
+        "x": 799,
+        "y": 168,
+        "w": 23,
+        "h": 37,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "VT"
+      },
+      {
+        "id": "bbox_2",
+        "x": 814,
+        "y": 163,
+        "w": 22,
+        "h": 49,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "NH"
+      },
+      {
+        "id": "bbox_3",
+        "x": 810,
+        "y": 199,
+        "w": 44,
+        "h": 24,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "MA"
+      },
+      {
+        "id": "bbox_4",
+        "x": 830,
+        "y": 217,
+        "w": 16,
+        "h": 10,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "RI"
+      },
+      {
+        "id": "bbox_5",
+        "x": 810,
+        "y": 215,
+        "w": 26,
+        "h": 25,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "CT"
+      },
+      {
+        "id": "bbox_6",
+        "x": 797,
+        "y": 233,
+        "w": 26,
+        "h": 42,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "NJ"
+      },
+      {
+        "id": "bbox_7",
+        "x": 796,
+        "y": 263,
+        "w": 21,
+        "h": 21,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "DE"
+      },
+      {
+        "id": "bbox_8",
+        "x": 752,
+        "y": 265,
+        "w": 66,
+        "h": 30,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "MD"
+      },
+      {
+        "id": "bbox_9",
+        "x": 777,
+        "y": 274,
+        "w": 9,
+        "h": 10,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "DC"
+      },
+      {
+        "id": "bbox_10",
+        "x": 745,
+        "y": 160,
+        "w": 73,
+        "h": 80,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "NY"
+      },
+      {
+        "id": "bbox_11",
+        "x": 738,
+        "y": 228,
+        "w": 65,
+        "h": 36,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "PA"
+      },
+      {
+        "id": "bbox_12",
+        "x": 687,
+        "y": 236,
+        "w": 56,
+        "h": 58,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "OH"
+      },
+      {
+        "id": "bbox_13",
+        "x": 726,
+        "y": 271,
+        "w": 40,
+        "h": 38,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "WV"
+      },
+      {
+        "id": "bbox_14",
+        "x": 721,
+        "y": 290,
+        "w": 90,
+        "h": 31,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "VA"
+      },
+      {
+        "id": "bbox_15",
+        "x": 707,
+        "y": 318,
+        "w": 109,
+        "h": 33,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "NC"
+      },
+      {
+        "id": "bbox_16",
+        "x": 718,
+        "y": 339,
+        "w": 71,
+        "h": 44,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "SC"
+      },
+      {
+        "id": "bbox_17",
+        "x": 692,
+        "y": 345,
+        "w": 69,
+        "h": 64,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "GA"
+      },
+      {
+        "id": "bbox_18",
+        "x": 676,
+        "y": 406,
+        "w": 115,
+        "h": 87,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "FL"
+      },
+      {
+        "id": "bbox_19",
+        "x": 660,
+        "y": 346,
+        "w": 51,
+        "h": 85,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "AL"
+      },
+      {
+        "id": "bbox_20",
+        "x": 626,
+        "y": 353,
+        "w": 46,
+        "h": 80,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "MS"
+      },
+      {
+        "id": "bbox_21",
+        "x": 585,
+        "y": 382,
+        "w": 74,
+        "h": 64,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "LA"
+      },
+      {
+        "id": "bbox_22",
+        "x": 579,
+        "y": 328,
+        "w": 63,
+        "h": 57,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "AR"
+      },
+      {
+        "id": "bbox_23",
+        "x": 638,
+        "y": 319,
+        "w": 107,
+        "h": 32,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "TN"
+      },
+      {
+        "id": "bbox_24",
+        "x": 639,
+        "y": 286,
+        "w": 93,
+        "h": 48,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "KY"
+      },
+      {
+        "id": "bbox_25",
+        "x": 657,
+        "y": 246,
+        "w": 45,
+        "h": 70,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "IN"
+      },
+      {
+        "id": "bbox_26",
+        "x": 665,
+        "y": 182,
+        "w": 50,
+        "h": 68,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "MI"
+      },
+      {
+        "id": "bbox_27",
+        "x": 596,
+        "y": 174,
+        "w": 65,
+        "h": 67,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "WI"
+      },
+      {
+        "id": "bbox_28",
+        "x": 618,
+        "y": 233,
+        "w": 45,
+        "h": 82,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "IL"
+      },
+      {
+        "id": "bbox_29",
+        "x": 568,
+        "y": 266,
+        "w": 79,
+        "h": 72,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "MO"
+      },
+      {
+        "id": "bbox_30",
+        "x": 555,
+        "y": 220,
+        "w": 78,
+        "h": 59,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "IA"
+      },
+      {
+        "id": "bbox_31",
+        "x": 553,
+        "y": 126,
+        "w": 74,
+        "h": 102,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "MN"
+      },
+      {
+        "id": "bbox_32",
+        "x": 482,
+        "y": 127,
+        "w": 81,
+        "h": 72,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "ND"
+      },
+      {
+        "id": "bbox_33",
+        "x": 478,
+        "y": 183,
+        "w": 93,
+        "h": 55,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "SD"
+      },
+      {
+        "id": "bbox_34",
+        "x": 474,
+        "y": 228,
+        "w": 99,
+        "h": 56,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "NE"
+      },
+      {
+        "id": "bbox_35",
+        "x": 493,
+        "y": 272,
+        "w": 92,
+        "h": 57,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "KS"
+      },
+      {
+        "id": "bbox_36",
+        "x": 483,
+        "y": 319,
+        "w": 112,
+        "h": 61,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "OK"
+      },
+      {
+        "id": "bbox_37",
+        "x": 441,
+        "y": 328,
+        "w": 174,
+        "h": 140,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "TX"
+      },
+      {
+        "id": "bbox_38",
+        "x": 408,
+        "y": 309,
+        "w": 76,
+        "h": 98,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "NM"
+      },
+      {
+        "id": "bbox_39",
+        "x": 341,
+        "y": 299,
+        "w": 69,
+        "h": 108,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "AZ"
+      },
+      {
+        "id": "bbox_40",
+        "x": 237,
+        "y": 202,
+        "w": 104,
+        "h": 170,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "CA"
+      },
+      {
+        "id": "bbox_41",
+        "x": 295,
+        "y": 214,
+        "w": 65,
+        "h": 95,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "NV"
+      },
+      {
+        "id": "bbox_42",
+        "x": 360,
+        "y": 225,
+        "w": 58,
+        "h": 90,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "UT"
+      },
+      {
+        "id": "bbox_43",
+        "x": 410,
+        "y": 249,
+        "w": 87,
+        "h": 77,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "CO"
+      },
+      {
+        "id": "bbox_44",
+        "x": 403,
+        "y": 183,
+        "w": 82,
+        "h": 84,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "WY"
+      },
+      {
+        "id": "bbox_45",
+        "x": 361,
+        "y": 114,
+        "w": 130,
+        "h": 87,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "MT"
+      },
+      {
+        "id": "bbox_46",
+        "x": 345,
+        "y": 105,
+        "w": 62,
+        "h": 130,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "ID"
+      },
+      {
+        "id": "bbox_47",
+        "x": 266,
+        "y": 84,
+        "w": 97,
+        "h": 83,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "WA"
+      },
+      {
+        "id": "bbox_48",
+        "x": 257,
+        "y": 135,
+        "w": 96,
+        "h": 86,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "OR"
+      },
+      {
+        "id": "bbox_49",
+        "x": 257,
+        "y": 399,
+        "w": 121,
+        "h": 100,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "AK"
+      },
+      {
+        "id": "bbox_50",
+        "x": 391,
+        "y": 442,
+        "w": 78,
+        "h": 61,
+        "source": "gt",
+        "kind": "bbox",
+        "label": "HI"
+      }
+    ],
+    "predicted_boxes": [],
+    "questions": [
+      {
+        "question_uid": "q_001",
+        "q_id": "Q_0",
+        "question_text": "Count the number of states in the lowest range along the Oregon border?",
+        "choices": [],
+        "answer_text": "2",
+        "correct_answer": "2",
+        "ground_truth_answer": "2"
+      },
+      {
+        "question_uid": "q_002",
+        "q_id": "Q_1",
+        "question_text": "Which is the Northern most state with a value in the highest range?",
+        "choices": [],
+        "answer_text": "New York",
+        "correct_answer": "New York",
+        "ground_truth_answer": "New York"
+      }
+    ]
+  },
+  {
+    "image_uid": "img_003",
+    "image_id": "2143.png",
+    "image_path": "ai2d/images/2143.png",
+    "annotation_path": "ai2d/annotations/2143.json",
+    "bbox": [],
+    "predicted_boxes": [],
+    "questions": []
+  },
+  {
+    "image_uid": "img_002",
+    "image_id": "1809.png",
+    "image_path": "ai2d/images/1809.png",
+    "annotation_path": "ai2d/annotations/1809.json",
+    "bbox": [],
+    "predicted_boxes": [],
+    "questions": []
+  }
+]

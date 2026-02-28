@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DIAGRAMS</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <h1>DIAGRAMS</h1>
+        <div class="workflow-tags" aria-label="Workflow">
+          <span>UPLOAD</span>
+          <span>ANNOTATE</span>
+          <span>EXPORT</span>
+        </div>
+      </header>
+
+      <section class="panel upload-panel">
+        <label class="api-key-wrap">
+          <span class="api-key-label">Enter Google AI Studio Key</span>
+          <input id="geminiApiKey" type="password" placeholder="Enter API Key..." autocomplete="off" />
+        </label>
+        <label class="upload-image-btn" for="imageUpload">
+          UPLOAD
+          <span class="upload-btn-sub">Image/JSON</span>
+        </label>
+        <input id="imageUpload" class="visually-hidden" type="file" accept="image/*,.json,application/json" />
+        <div class="row">
+          <button id="prevBtn" class="nav-btn" disabled aria-label="Previous">◀</button>
+          <button id="nextBtn" class="nav-btn" disabled aria-label="Next">▶</button>
+          <span id="recordInfo">No record loaded</span>
+        </div>
+      </section>
+
+      <section class="panel workspace">
+        <div class="canvas-column">
+          <div class="row">
+            <button id="drawModeBtn" disabled>Draw Box: Off</button>
+            <button id="undoBtn" disabled>Undo</button>
+            <button id="deleteBoxBtn" disabled>Delete Selected</button>
+            <button id="clearBoxesBtn" disabled>Clear Boxes</button>
+          </div>
+          <p class="canvas-help">Tip: Click Select Data Points, choose as many points as needed, then click Generate Box.</p>
+          <div id="canvasContainer" class="canvas-container">
+            <canvas id="annotationCanvas"></canvas>
+            <p id="canvasHint">Upload an image to begin.</p>
+          </div>
+        </div>
+
+        <div class="meta-column">
+          <div class="meta-split">
+            <div class="meta-main">
+              <label>
+                Dataset Name
+                <input id="datasetType" type="text" placeholder="Enter Dataset Name.." />
+              </label>
+              <label>
+                Question
+                <textarea id="questionField" rows="3"></textarea>
+              </label>
+              <label>
+                Answer
+                <textarea id="answerField" rows="3"></textarea>
+              </label>
+              <label>
+                Choices (comma-separated)
+                <input id="choicesField" type="text" />
+              </label>
+              <div class="row action-row">
+               <button id="bboxActionBtn" class="qa-secondary-btn dual-label-btn" disabled>EVIDENCE SELECTION</button>
+              </div>
+              <div class="row action-row">
+                <button id="qaActionBtn" class="qa-secondary-btn" disabled>GENERATE Q&amp;A</button>
+              </div>
+              <div class="row action-row">
+                <div class="sam-tools-wrap">
+                  <p class="sam-tools-title">Add New Bounding Boxes</p>
+                  <div class="sam-tools" aria-label="SAM tools">
+                    <button id="samSelectPointsBtn" class="qa-secondary-btn sam-compact-btn" disabled>
+                      SELECT
+                      <span class="sam-btn-sub">Data Points</span>
+                    </button>
+                    <button id="samGenerateBtn" class="qa-secondary-btn sam-compact-btn" disabled>
+                      GENERATE
+                      <span class="sam-btn-sub">Box</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <aside class="gt-side">
+              <h2>Bounding Boxes</h2>
+              <div class="bbox-legend" aria-label="Bounding box legend">
+                <span class="legend-item">
+                  <span class="legend-check gt" aria-hidden="true">✓</span>
+                  <span>Ground Truth</span>
+                </span>
+                <span class="legend-item">
+                  <span class="legend-check pred" aria-hidden="true">✓</span>
+                  <span>Predicted</span>
+                </span>
+                <span class="legend-item">
+                  <span class="legend-check added" aria-hidden="true">✓</span>
+                  <span>Added</span>
+                </span>
+              </div>
+              <div id="gtBoxList" class="gt-box-list">No GT boxes loaded.</div>
+              <details class="compact-side-details">
+                <summary>AI Status</summary>
+                <pre id="aiStatusView">No AI requests yet.</pre>
+              </details>
+              <details class="compact-side-details">
+                <summary>Record JSON</summary>
+                <pre id="rawJsonView">{}</pre>
+              </details>
+              <div class="export-row export-row-inline">
+                <button id="exportAllBtn" class="export-primary" disabled>
+                  <span class="export-main-text">EXPORT</span>
+                  <span class="export-subtext">Annotations</span>
+                </button>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div id="labelModal" class="modal-backdrop" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="labelModalTitle">
+        <h3 id="labelModalTitle">Label New Bounding Box</h3>
+        <p class="modal-subtext" id="labelModalBoxId">Box:</p>
+        <label for="newBoxLabelInput">Label (optional)</label>
+        <input id="newBoxLabelInput" type="text" maxlength="120" />
+        <div class="modal-actions">
+          <button id="newBoxLabelCancelBtn" type="button">Skip</button>
+          <button id="newBoxLabelSaveBtn" type="button">Save Label</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

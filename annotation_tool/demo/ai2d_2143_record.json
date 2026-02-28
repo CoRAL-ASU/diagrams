@@ -1,0 +1,100 @@
+{
+  "image_path": "ai2d/images/2143.png",
+  "annotation_path": "ai2d/annotations/2143.json",
+  "question_path": "ai2d/questions/2143.json",
+  "image_id": "2143.png",
+  "q_id": "2143.png-2",
+  "question_text": "How long does it take to complete the pupa stage?",
+  "answer_text": "1-3 weeks",
+  "correct_answer": "1-3 weeks",
+  "ground_truth_answer": "1-3 weeks",
+  "choices": [
+    "1-3 hours",
+    "1-2 days",
+    "2-4 months",
+    "1-3 weeks"
+  ],
+  "bbox": [
+    {
+      "id": "BBOX_0",
+      "x": 204.0,
+      "y": 21.0,
+      "w": 113.0,
+      "h": 48.0,
+      "source": "gt",
+      "kind": "bbox",
+      "label": ""
+    },
+    {
+      "id": "BBOX_1",
+      "x": 507.0,
+      "y": 155.0,
+      "w": 16.0,
+      "h": 28.0,
+      "source": "gt",
+      "kind": "bbox",
+      "label": ""
+    },
+    {
+      "id": "BBOX_2",
+      "x": 237.0,
+      "y": 415.0,
+      "w": 174.0,
+      "h": 29.0,
+      "source": "gt",
+      "kind": "bbox",
+      "label": ""
+    },
+    {
+      "id": "BBOX_3",
+      "x": 118.0,
+      "y": 274.0,
+      "w": 18.0,
+      "h": 36.0,
+      "source": "gt",
+      "kind": "bbox",
+      "label": ""
+    },
+    {
+      "id": "BBOX_4",
+      "x": 304.0,
+      "y": 5.0,
+      "w": 202.0,
+      "h": 124.0,
+      "source": "gt",
+      "kind": "bbox",
+      "label": ""
+    },
+    {
+      "id": "BBOX_5",
+      "x": 47.0,
+      "y": 36.0,
+      "w": 184.0,
+      "h": 188.0,
+      "source": "gt",
+      "kind": "bbox",
+      "label": ""
+    },
+    {
+      "id": "BBOX_6",
+      "x": 53.0,
+      "y": 299.0,
+      "w": 194.0,
+      "h": 100.0,
+      "source": "gt",
+      "kind": "bbox",
+      "label": ""
+    },
+    {
+      "id": "BBOX_7",
+      "x": 355.0,
+      "y": 182.0,
+      "w": 206.0,
+      "h": 162.0,
+      "source": "gt",
+      "kind": "bbox",
+      "label": ""
+    }
+  ],
+  "predicted_boxes": []
+}
