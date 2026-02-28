@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="https://your-project-page.com">🌐 Project Page</a> •
-  <a href="[https://youtube.com/your-demo-video](https://youtu.be/oli_ekuLYjo)">🎬 Video</a> •
+  <a href="https://youtu.be/oli_ekuLYjo">🎬 Video</a> •
   <a href="https://github.com/your-repo">💻 Demo</a> •
 </p>
 
