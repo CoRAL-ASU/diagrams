@@ -1,4 +1,4 @@
-# Diagrams: A Review Framework for Reasoning-Level Attribution in Diagram QA
+# Official Tool and Demo for the ACL 2026 paper, Diagrams: A Review Framework for Reasoning-Level Attribution in Diagram QA
 
 <p align="center">
   <a href="https://coral-lab-asu.github.io/diagrams/">🌐 Project Page</a> •
